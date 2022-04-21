@@ -1,16 +1,18 @@
 import { Stack, StackProps } from 'aws-cdk-lib';
+import { EventBus } from 'aws-cdk-lib/aws-events';
 import { Construct } from 'constructs';
-// import * as sqs from 'aws-cdk-lib/aws-sqs';
 
+export interface BlogL4ConstructStackProps extends StackProps {
+  namespace: string;
+}
 export class BlogL4ConstructStack extends Stack {
-  constructor(scope: Construct, id: string, props?: StackProps) {
+  bus: EventBus;
+  constructor(scope: Construct, id: string, props: BlogL4ConstructStackProps) {
     super(scope, id, props);
 
-    // The code that defines your stack goes here
-
-    // example resource
-    // const queue = new sqs.Queue(this, 'BlogL4ConstructQueue', {
-    //   visibilityTimeout: cdk.Duration.seconds(300)
-    // });
+    // could also be a lookup
+    this.bus = new EventBus(this, 'Bus', {
+      eventBusName: `${props.namespace}-bus`
+    });
   }
 }
