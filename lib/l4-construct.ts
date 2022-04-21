@@ -1,6 +1,5 @@
-import { Rule } from "aws-cdk-lib/aws-events";
-import { LambdaFunction } from "aws-cdk-lib/aws-events-targets";
-import { AccountPrincipal, Role } from "aws-cdk-lib/aws-iam";
+import { CfnEventBusPolicy, Rule } from "aws-cdk-lib/aws-events";
+import { LambdaFunction, EventBus as EventBusTarget } from "aws-cdk-lib/aws-events-targets";
 import { Runtime } from "aws-cdk-lib/aws-lambda";
 import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
 import { BlogL4ConstructStack } from "./blog-l4-construct-stack";
@@ -35,12 +34,23 @@ export const L4Construct = (props: L4ConstructProps) => {
   // allow transmitFn to put events to transmit bus
   transmitStack.bus.grantPutEventsTo(transmitFn);
 
+  const transmitRule = new Rule(transmitStack, `transmit-${source}-rule`, {
+    ruleName: `transmit-${source}-rule`,
+    eventPattern: {
+      source: [source],
+    },
+    eventBus: transmitStack.bus,
+  });
+  transmitRule.addTarget(new EventBusTarget(receiveStack.bus));
+
   // allow transmit bus to send events to receive bus
   // this part is a little inefficient
-  const demoRole = new Role(receiveStack, `transmit-${source}-role`, {
-    assumedBy: new AccountPrincipal(transmitStack.account),
+  new CfnEventBusPolicy(receiveStack, `receive-${source}-policy`, {
+    eventBusName: receiveStack.bus.eventBusName,
+    principal: transmitStack.account,
+    action: 'events:PutEvents',
+    statementId: `allow_put_events_for_${source}`,
   });
-  receiveStack.bus.grantPutEventsTo(demoRole);
 
   const receiveFn = new NodejsFunction(receiveStack, `receive-${source}-fn`, {
     functionName: `receive-${source}-fn`,
