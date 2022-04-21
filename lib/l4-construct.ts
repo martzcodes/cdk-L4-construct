@@ -18,12 +18,12 @@ export const L4Construct = (props: L4ConstructProps) => {
     transmitStack,
     receiveStack,
     source,
-    receiveEntry = `${__dirname}/lambda/receive.ts`,
-    transmitEntry = `${__dirname}/lambda/transmit.ts`,
+    receiveEntry = `${__dirname}/../lambda/receive.ts`,
+    transmitEntry = `${__dirname}/../lambda/transmit.ts`,
   } = props;
 
-  const transmitFn = new NodejsFunction(transmitStack, "transmitFn", {
-    functionName: `transmitFn`,
+  const transmitFn = new NodejsFunction(transmitStack, `transmit-${source}-fn`, {
+    functionName: `transmit-${source}-fn`,
     entry: transmitEntry,
     runtime: Runtime.NODEJS_14_X,
     environment: {
@@ -36,18 +36,19 @@ export const L4Construct = (props: L4ConstructProps) => {
   transmitStack.bus.grantPutEventsTo(transmitFn);
 
   // allow transmit bus to send events to receive bus
-  const demoRole = new Role(receiveStack, "demoRole", {
+  // this part is a little inefficient
+  const demoRole = new Role(receiveStack, `transmit-${source}-role`, {
     assumedBy: new AccountPrincipal(transmitStack.account),
   });
   receiveStack.bus.grantPutEventsTo(demoRole);
 
-  const receiveFn = new NodejsFunction(receiveStack, "receiveFn", {
-    functionName: `receiveFn`,
+  const receiveFn = new NodejsFunction(receiveStack, `receive-${source}-fn`, {
+    functionName: `receive-${source}-fn`,
     entry: receiveEntry,
     runtime: Runtime.NODEJS_14_X,
   });
   // invoke receiveFn from same source as transmit
-  const rule = new Rule(receiveStack, "demoRule", {
+  const rule = new Rule(receiveStack, `receive-${source}-rule`, {
     description: "this is some rule for the eventbus...",
     eventPattern: {
       source: [source],
